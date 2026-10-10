@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>希尔反应模拟器 · 可切换实验条件</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      user-select: none;
+    }
+    body {
+      background: #d9ead9;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .app {
+      max-width: 1100px;
+      width: 100%;
+      background: white;
+      border-radius: 36px;
+      box-shadow: 0 20px 45px rgba(20, 60, 20, 0.25);
+      padding: 22px 26px 26px;
+      border: 1px solid #b8d9b8;
+      position: relative;
+      overflow: visible;
+    }
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #153b15;
+      margin: 0 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    h1 small {
+      background: #d9f0d9;
+      color: #0f4f0f;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-weight: 500;
+    }
+    .subhead {
+      color: #2d5a2d;
+      margin-bottom: 18px;
+      font-size: 0.92rem;
+      border-left: 4px solid #6aaa6a;
+      padding-left: 14px;
+      background: #f5fff5;
+      border-radius: 0 10px 10px 0;
+      line-height: 1.4;
+    }
+    .workbench {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .left-panel {
+      flex: 0 0 200px;
+      min-width: 170px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .leaf-source {
+      background: #e8f5e8;
+      border-radius: 24px;
+      padding: 16px 12px;
+      border: 2px solid #a0c8a0;
+      text-align: center;
+      cursor: grab;
+      transition: 0.15s;
+      box-shadow: 0 4px 10px rgba(0, 40, 0, 0.06);
+    }
+    .leaf-source:active { cursor: grabbing; }
+    .leaf-source .leaf-icon {
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .leaf-source .leaf-label {
+      font-weight: 600;
+      color: #1d4b1d;
+      font-size: 0.9rem;
+    }
+    .leaf-source .leaf-sub {
+      font-size: 0.7rem;
+      color: #4a6a4a;
+      margin-top: 2px;
+    }
+    .toolbox {
+      background: #f3fcf3;
+      border-radius: 24px;
+      padding: 16px 12px;
+      border: 1px solid #b8d9b8;
+    }
+    .toolbox-title {
+      font-weight: 600;
+      color: #1d4b1d;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .reagent-card {
+      background: white;
+      border-radius: 16px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border: 1.5px solid #b0d0b0;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.12s;
+      box-shadow: 0 2px 6px rgba(0, 30, 0, 0.04);
+    }
+    .reagent-card:hover { border-color: #4a8a4a; background: #f0fff0; }
+    .reagent-card:active { cursor: grabbing; transform: scale(0.97); }
+    .reagent-card.added {
+      opacity: 0.4;
+      pointer-events: none;
+      border-style: dashed;
+      background: #f0f0f0;
+    }
+    .reagent-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: white;
+      flex-shrink: 0;
+    }
+    .icon-iron { background: #b87333; }
+    .icon-nadp { background: #2a6b2a; }
+    .icon-water { background: #4a8ab8; }
+
+    .center-panel {
+      flex: 2;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .container-area {
+      width: 100%;
+      max-width: 420px;
+      background: #fafffa;
+      border-radius: 32px;
+      padding: 18px 18px 20px;
+      border: 2px solid #b8d9b8;
+      box-shadow: inset 0 2px 10px rgba(0, 40, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: 0.2s;
+      position: relative;
+    }
+    .container-area.drag-over {
+      border-color: #3a8a3a;
+      background: #e6f5e6;
+      box-shadow: 0 0 0 6px rgba(80, 160, 80, 0.15);
+    }
+    .container-area.sun-over {
+      border-color: #e6b86a;
+      box-shadow: 0 0 0 8px rgba(255, 215, 80, 0.25);
+    }
+    .container-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #2d5a2d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .liquid {
+      width: 100%;
+      background: #d4e8f0;
+      border-radius: 24px;
+      padding: 16px 10px 10px;
+      min-height: 180px;
+      position: relative;
+      border: 2px solid #a0c0d0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: 0.2s;
+    }
+    /* ★ 可切换的标签按钮 ★ */
+    .condition-buttons {
+      position: absolute;
+      top: 8px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 14px;
+      pointer-events: none;
+    }
+    .cond-btn {
+      pointer-events: auto;
+      border: none;
+      border-radius: 30px;
+      padding: 4px 14px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .cond-btn:active { transform: scale(0.95); }
+    .cond-btn.water-on {
+      background: #4a8ab8;
+      color: white;
+    }
+    .cond-btn.water-off {
+      background: #d0d0d0;
+      color: #666;
+      text-decoration: line-through;
+    }
+    .cond-btn.co2-on {
+      background: #a0a0a0;
+      color: white;
+    }
+    .cond-btn.co2-off {
+      background: #d0d0d0;
+      color: #666;
+    }
+    .cond-btn.co2-off::after {
+      content: ' 🚫';
+    }
+
+    .chloroplast-area {
+      margin-top: 30px;
+      min-height: 70px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      padding: 6px;
+      width: 100%;
+    }
+    .chloroplast {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #3a8a3a;
+      box-shadow: 0 4px 10px rgba(30, 90, 30, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: white;
+      text-align: center;
+      line-height: 1.1;
+      animation: pulse 2s infinite;
+      transition: 0.2s;
+      flex-shrink: 0;
+      border: 2px solid #1a5a1a;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+    .chloroplast.reacting {
+      animation: glow 0.8s infinite alternate;
+      background: #2a9a2a;
+    }
+    @keyframes glow {
+      from { box-shadow: 0 0 8px #6aff6a; }
+      to { box-shadow: 0 0 22px #6aff6a; }
+    }
+    .reagent-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 10px;
+      min-height: 28px;
+    }
+    .reagent-tag {
+      background: #e8f0e8;
+      border-radius: 30px;
+      padding: 4px 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #1d4b1d;
+      border: 1px solid #b8d9b8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bubbles-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 8px;
+      min-height: 36px;
+    }
+    .bubble {
+      background: #cfe8ff;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #1a4a8a;
+      animation: floatUp 1.2s ease-in-out infinite;
+      border: 1.5px solid #8ab8e0;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-22px); opacity: 0.2; }
+    }
+
+    .sun-draggable {
+      position: absolute;
+      top: 30px;
+      left: 430px;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      cursor: grab;
+      z-index: 50;
+      transition: filter 0.2s, transform 0.1s;
+      filter: drop-shadow(0 0 10px #ffd966);
+      pointer-events: auto;
+      touch-action: none;
+      line-height: 1;
+    }
+    .sun-draggable:active { cursor: grabbing; }
+    .sun-draggable.dragging {
+      transform: scale(1.15);
+      filter: drop-shadow(0 0 30px #ffdb7c);
+    }
+    .sun-draggable.shining {
+      animation: sunPulse 0.8s infinite alternate;
+    }
+    @keyframes sunPulse {
+      from { transform: scale(1); filter: drop-shadow(0 0 8px #ffd966); }
+      to { transform: scale(1.1); filter: drop-shadow(0 0 32px #ffdb7c); }
+    }
+    .sun-label-float {
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 0.7rem;
+      color: #7a5a1a;
+      font-weight: 500;
+      background: rgba(255, 240, 200, 0.9);
+      padding: 2px 8px;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    .right-panel {
+      flex: 1.2;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .status-card {
+      background: #f3fcf3;
+      border-radius: 24px;
+      padding: 16px 18px;
+      border: 1px solid #b8d9b8;
+      flex: 1;
+    }
+    .status-title {
+      font-weight: 600;
+      color: #1d4b1d;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+    .status-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.8rem;
+      color: #2d4a2d;
+      line-height: 1.8;
+    }
+    .status-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .check { color: #3a8a3a; font-weight: 700; width: 18px; }
+    .cross { color: #b0b0b0; width: 18px; }
+    .feedback-box {
+      background: #e8f3e8;
+      border-radius: 20px;
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      color: #1a4a1a;
+      border-left: 5px solid #4b8a4b;
+      line-height: 1.5;
+      min-height: 3.6em;
+      transition: 0.15s;
+    }
+    .feedback-box strong { color: #0a3a0a; }
+    .btn {
+      border: none;
+      padding: 12px 24px;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.12s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      border: 1px solid transparent;
+    }
+    .btn-outline {
+      background: white;
+      border: 1px solid #b0d0b0;
+      color: #1a4a1a;
+    }
+    .btn-outline:hover { background: #f0fff0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .badge {
+      background: #ffdb7c;
+      color: #4d3700;
+      padding: 2px 10px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <h1>
+    🔬 希尔反应模拟器
+    <small>光反应探究</small>
+    <span class="badge" id="progressBadge">步骤 1/4</span>
+  </h1>
+  <div class="subhead">
+    <strong>操作说明：</strong> ① 拖拽叶片到容器中提取叶绿体 → ② 拖拽铁盐或 NADP⁺ 加入 → ③ <strong>点击 H₂O / CO₂ 标签切换条件</strong> → ④ 拖动太阳到容器上方 → ⑤ 观察 O₂ 释放。
+  </div>
+
+  <div class="workbench">
+    <div class="left-panel">
+      <div class="leaf-source" id="leafSource" draggable="true">
+        <div class="leaf-icon">🍃</div>
+        <div class="leaf-label">新鲜叶片</div>
+        <div class="leaf-sub">拖拽到容器中提取叶绿体</div>
+      </div>
+      <div class="toolbox">
+        <div class="toolbox-title">🧪 试剂（拖拽加入）</div>
+        <div class="reagent-card" id="reagentIron" draggable="true" data-reagent="iron">
+          <div class="reagent-icon icon-iron">Fe</div>
+          <div>
+            <div style="font-weight:600; font-size:0.85rem;">铁盐</div>
+            <div style="font-size:0.7rem; color:#6a6a4a;">人工电子受体</div>
+          </div>
+        </div>
+        <div class="reagent-card" id="reagentNadp" draggable="true" data-reagent="nadp">
+          <div class="reagent-icon icon-nadp">NADP⁺</div>
+          <div>
+            <div style="font-weight:600; font-size:0.85rem;">NADP⁺</div>
+            <div style="font-size:0.7rem; color:#6a6a4a;">天然电子受体</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="center-panel" id="centerPanel">
+      <div class="container-area" id="containerArea">
+        <div class="container-label">反应容器 · 叶绿体悬浮液</div>
+        <div class="liquid" id="liquid">
+          <!-- ★ 可点击切换的条件按钮 ★ -->
+          <div class="condition-buttons">
+            <button class="cond-btn water-on" id="btnWater" title="点击切换有水/无水">💧 有水</button>
+            <button class="cond-btn co2-off" id="btnCo2" title="点击切换有CO₂/无CO₂">CO₂</button>
+          </div>
+          <div class="chloroplast-area" id="chloroplastArea">
+            <div style="color:#8aaa8a; font-size:0.85rem;" id="emptyHint">拖拽叶片到这里提取叶绿体</div>
+          </div>
+          <div class="reagent-tags" id="reagentTags"></div>
+        </div>
+        <div class="bubbles-area" id="bubblesArea"></div>
+      </div>
+
+      <div class="sun-draggable" id="sunDraggable">
+        ☀️
+        <span class="sun-label-float">拖我到容器上</span>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="status-card">
+        <div class="status-title">📋 实验条件</div>
+        <ul class="status-list" id="statusList">
+          <li><span class="cross">○</span> 叶绿体已提取</li>
+          <li><span class="cross">○</span> 铁盐或 NADP⁺ 已加入</li>
+          <li><span class="cross">○</span> 有水（H₂O）</li>
+          <li><span class="cross">○</span> 无 CO₂</li>
+          <li><span class="cross">○</span> 光照已照射</li>
+          <li><span class="cross">○</span> O₂ 释放</li>
+        </ul>
+      </div>
+      <div class="feedback-box" id="feedbackBox">
+        <strong>💡 提示：</strong> 从左侧拖拽叶片到容器中，提取叶绿体。
+      </div>
+      <button class="btn btn-outline" id="resetBtn">⟲ 重置实验</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ---------- 状态 ----------
+  let hasChloroplast = false;
+  let hasReagent = false;
+  let hasLight = false;
+  let isReacting = false;
+  let reagentType = null;
+  let bubbleInterval = null;
+  let isSunDragging = false;
+  let sunOffsetX = 0, sunOffsetY = 0;
+
+  // ★ 条件状态：true=有，false=无 ★
+  let hasWater = true;    // 默认有水
+  let hasCO2 = false;     // 默认无CO₂
+
+  // DOM
+  const app = document.getElementById('app');
+  const leafSource = document.getElementById('leafSource');
+  const containerArea = document.getElementById('containerArea');
+  const chloroplastArea = document.getElementById('chloroplastArea');
+  const emptyHint = document.getElementById('emptyHint');
+  const reagentTags = document.getElementById('reagentTags');
+  const bubblesArea = document.getElementById('bubblesArea');
+  const sunDraggable = document.getElementById('sunDraggable');
+  const feedbackBox = document.getElementById('feedbackBox');
+  const statusList = document.getElementById('statusList');
+  const progressBadge = document.getElementById('progressBadge');
+  const resetBtn = document.getElementById('resetBtn');
+  const reagentIron = document.getElementById('reagentIron');
+  const reagentNadp = document.getElementById('reagentNadp');
+  const centerPanel = document.getElementById('centerPanel');
+  const btnWater = document.getElementById('btnWater');
+  const btnCo2 = document.getElementById('btnCo2');
+
+  // ---------- 初始化太阳位置 ----------
+  function initSunPosition() {
+    sunDraggable.style.left = '260px';
+    sunDraggable.style.top = '20px';
+  }
+  initSunPosition();
+
+  // ---------- 条件按钮切换 ----------
+  function updateConditionButtons() {
+    // 水按钮
+    if (hasWater) {
+      btnWater.className = 'cond-btn water-on';
+      btnWater.textContent = '💧 有水';
+    } else {
+      btnWater.className = 'cond-btn water-off';
+      btnWater.textContent = '💧 无水';
+    }
+    // CO₂ 按钮
+    if (hasCO2) {
+      btnCo2.className = 'cond-btn co2-on';
+      btnCo2.textContent = 'CO₂ 有';
+    } else {
+      btnCo2.className = 'cond-btn co2-off';
+      btnCo2.textContent = 'CO₂ 无';
+    }
+    updateStatus();
+    // 条件变化时重新评估反应
+    reevaluateReaction();
+  }
+
+  btnWater.addEventListener('click', () => {
+    hasWater = !hasWater;
+    updateConditionButtons();
+    feedbackBox.innerHTML = hasWater
+      ? `<strong>💧 有水：</strong> 悬浮液中含有 H₂O，可以作为光反应的原料。`
+      : `<strong>🚫 无水：</strong> 悬浮液中没有 H₂O，光反应缺少原料，无法释放 O₂。`;
+  });
+
+  btnCo2.addEventListener('click', () => {
+    hasCO2 = !hasCO2;
+    updateConditionButtons();
+    feedbackBox.innerHTML = hasCO2
+      ? `<strong>🟤 有 CO₂：</strong> 悬浮液中含有 CO₂，但希尔反应不需要 CO₂。观察是否影响 O₂ 释放。`
+      : `<strong>🚫 无 CO₂：</strong> 悬浮液中没有 CO₂。希尔实验正是在无 CO₂ 条件下进行的。`;
+  });
+
+  // ---------- 条件变化时重新评估反应 ----------
+  function reevaluateReaction() {
+    // 如果条件不满足，停止反应
+    if (isReacting && (!hasWater || !hasLight || !hasReagent || !hasChloroplast)) {
+      stopReaction();
+      let reason = '';
+      if (!hasWater) reason = '没有 H₂O，光反应缺少原料。';
+      else if (!hasLight) reason = '光照不足。';
+      else if (!hasReagent) reason = '缺少电子受体。';
+      else if (!hasChloroplast) reason = '没有叶绿体。';
+      feedbackBox.innerHTML = `<strong>⚠️ 反应停止：</strong> ${reason}`;
+    }
+    // 如果条件满足但未反应，可以开始（需要用户触发光照或自动触发）
+    if (!isReacting && hasChloroplast && hasReagent && hasLight && hasWater) {
+      startBubbles();
+      feedbackBox.innerHTML = `<strong>✨ 条件满足，反应进行中！</strong> 水在光照下被分解，释放 O₂。`;
+    }
+    updateStatus();
+  }
+
+  // ---------- 停止反应 ----------
+  function stopReaction() {
+    if (bubbleInterval) {
+      clearInterval(bubbleInterval);
+      bubbleInterval = null;
+    }
+    isReacting = false;
+    document.querySelectorAll('.chloroplast').forEach(cp => {
+      cp.classList.remove('reacting');
+    });
+    bubblesArea.innerHTML = '';
+    updateStatus();
+  }
+
+  // ---------- 拖拽：叶片 ----------
+  leafSource.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', 'leaf');
+  });
+  containerArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    containerArea.classList.add('drag-over');
+  });
+  containerArea.addEventListener('dragleave', () => {
+    containerArea.classList.remove('drag-over');
+  });
+  containerArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    containerArea.classList.remove('drag-over');
+    const type = e.dataTransfer.getData('text/plain');
+    if (type === 'leaf') addChloroplast();
+    else if (type === 'iron' || type === 'nadp') addReagent(type);
+  });
+  leafSource.addEventListener('click', () => addChloroplast());
+
+  // 试剂拖拽
+  reagentIron.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', 'iron');
+  });
+  reagentNadp.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', 'nadp');
+  });
+  reagentIron.addEventListener('click', () => addReagent('iron'));
+  reagentNadp.addEventListener('click', () => addReagent('nadp'));
+
+  // ---------- 添加叶绿体 ----------
+  function addChloroplast() {
+    if (hasChloroplast) {
+      feedbackBox.innerHTML = `<strong>💡 提示：</strong> 叶绿体已经在容器中了。`;
+      return;
+    }
+    hasChloroplast = true;
+    emptyHint.style.display = 'none';
+    for (let i = 0; i < 3; i++) {
+      const cp = document.createElement('div');
+      cp.className = 'chloroplast';
+      cp.textContent = '叶绿体';
+      cp.style.animationDelay = (i * 0.3) + 's';
+      chloroplastArea.appendChild(cp);
+    }
+    updateStatus();
+    feedbackBox.innerHTML = `<strong>✅ 叶绿体已提取！</strong> 现在加入铁盐或 NADP⁺。`;
+    progressBadge.textContent = '步骤 2/4';
+    reevaluateReaction();
+  }
+
+  // ---------- 添加试剂 ----------
+  function addReagent(type) {
+    if (!hasChloroplast) {
+      feedbackBox.innerHTML = `<strong>⚠️ 请先提取叶绿体。</strong>`;
+      return;
+    }
+    if (hasReagent) {
+      feedbackBox.innerHTML = `<strong>💡 提示：</strong> 已经加入了一种受体。`;
+      return;
+    }
+    hasReagent = true;
+    reagentType = type;
+    reagentIron.classList.add('added');
+    reagentNadp.classList.add('added');
+    const tag = document.createElement('span');
+    tag.className = 'reagent-tag';
+    tag.textContent = type === 'iron' ? '🧪 铁盐' : '🧪 NADP⁺';
+    reagentTags.appendChild(tag);
+    updateStatus();
+    feedbackBox.innerHTML = `<strong>✅ ${type === 'iron' ? '铁盐' : 'NADP⁺'} 已加入！</strong> 现在把太阳拖到容器上方。`;
+    progressBadge.textContent = '步骤 3/4';
+    reevaluateReaction();
+  }
+
+  // ---------- 太阳自由拖拽 ----------
+  function getSunRect() { return sunDraggable.getBoundingClientRect(); }
+  function getContainerRect() { return containerArea.getBoundingClientRect(); }
+
+  function isSunOverContainer() {
+    const sunRect = getSunRect();
+    const contRect = getContainerRect();
+    const overlapX = Math.max(0, Math.min(sunRect.right, contRect.right) - Math.max(sunRect.left, contRect.left));
+    const overlapY = Math.max(0, Math.min(sunRect.bottom, contRect.bottom) - Math.max(sunRect.top, contRect.top));
+    const overlapArea = overlapX * overlapY;
+    const sunArea = sunRect.width * sunRect.height;
+    return overlapArea > sunArea * 0.3;
+  }
+
+  function startSunDrag(e) {
+    if (isReacting) {
+      feedbackBox.innerHTML = `<strong>☀️ 反应正在进行。</strong>`;
+      return;
+    }
+    isSunDragging = true;
+    sunDraggable.classList.add('dragging');
+    const rect = sunDraggable.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    sunOffsetX = clientX - rect.left;
+    sunOffsetY = clientY - rect.top;
+    e.preventDefault();
+  }
+
+  function onSunDragMove(e) {
+    if (!isSunDragging) return;
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const cpRect = centerPanel.getBoundingClientRect();
+    let newLeft = clientX - cpRect.left - sunOffsetX;
+    let newTop = clientY - cpRect.top - sunOffsetY;
+    const cpWidth = centerPanel.clientWidth;
+    const cpHeight = centerPanel.clientHeight;
+    const sunWidth = sunDraggable.offsetWidth;
+    const sunHeight = sunDraggable.offsetHeight;
+    newLeft = Math.max(-sunWidth * 0.3, Math.min(cpWidth - sunWidth * 0.7, newLeft));
+    newTop = Math.max(-sunHeight * 0.3, Math.min(cpHeight - sunHeight * 0.7, newTop));
+    sunDraggable.style.left = newLeft + 'px';
+    sunDraggable.style.top = newTop + 'px';
+    if (isSunOverContainer()) {
+      containerArea.classList.add('sun-over');
+    } else {
+      containerArea.classList.remove('sun-over');
+    }
+  }
+
+  function endSunDrag(e) {
+    if (!isSunDragging) return;
+    isSunDragging = false;
+    sunDraggable.classList.remove('dragging');
+    if (isSunOverContainer()) {
+      containerArea.classList.remove('sun-over');
+      addLight();
+    } else {
+      containerArea.classList.remove('sun-over');
+      if (!isReacting) {
+        feedbackBox.innerHTML = `<strong>💡 太阳还没照到容器上。</strong> 请把太阳拖到容器正上方。`;
+      }
+    }
+  }
+
+  sunDraggable.addEventListener('mousedown', startSunDrag);
+  sunDraggable.addEventListener('touchstart', startSunDrag, { passive: false });
+  document.addEventListener('mousemove', onSunDragMove);
+  document.addEventListener('touchmove', onSunDragMove, { passive: false });
+  document.addEventListener('mouseup', endSunDrag);
+  document.addEventListener('touchend', endSunDrag);
+
+  // ---------- 添加光照 ----------
+  function addLight() {
+    if (!hasChloroplast) {
+      feedbackBox.innerHTML = `<strong>⚠️ 请先提取叶绿体。</strong>`;
+      return;
+    }
+    if (!hasReagent) {
+      feedbackBox.innerHTML = `<strong>⚠️ 请先加入铁盐或 NADP⁺。</strong>`;
+      return;
+    }
+    if (!hasWater) {
+      feedbackBox.innerHTML = `<strong>⚠️ 没有 H₂O，光反应缺少原料，无法释放 O₂。</strong> 点击“💧 有水”切换。`;
+      return;
+    }
+    if (hasLight && isReacting) {
+      feedbackBox.innerHTML = `<strong>💡 光照已经照射了。</strong>`;
+      return;
+    }
+
+    hasLight = true;
+    sunDraggable.classList.add('shining');
+    updateStatus();
+    progressBadge.textContent = '步骤 4/4 · 观察中';
+
+    startBubbles();
+    feedbackBox.innerHTML = `<strong>☀️ 光照已照射！</strong> 叶绿体吸收光能，水被分解，释放 O₂。`;
+  }
+
+  // ---------- 气泡 ----------
+  function startBubbles() {
+    if (isReacting) return;
+    if (!hasWater) {
+      feedbackBox.innerHTML = `<strong>⚠️ 没有 H₂O，无法释放 O₂。</strong>`;
+      return;
+    }
+    isReacting = true;
+    document.querySelectorAll('.chloroplast').forEach(cp => {
+      cp.classList.add('reacting');
+    });
+    bubbleInterval = setInterval(() => {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = 'O₂';
+      bubble.style.animationDelay = Math.random() * 0.4 + 's';
+      bubblesArea.appendChild(bubble);
+      if (bubblesArea.children.length > 18) {
+        bubblesArea.removeChild(bubblesArea.firstChild);
+      }
+    }, 280);
+    updateStatus();
+    feedbackBox.innerHTML = `<strong>✨ 反应进行中！</strong> 水在光照下被分解，释放 O₂。`;
+  }
+
+  // ---------- 状态列表 ----------
+  function updateStatus() {
+    const items = [
+      { label: '叶绿体已提取', done: hasChloroplast },
+      { label: '铁盐或 NADP⁺ 已加入', done: hasReagent },
+      { label: hasWater ? '有水（H₂O）' : '无水（H₂O 缺失）', done: hasWater },
+      { label: hasCO2 ? '有 CO₂' : '无 CO₂', done: !hasCO2 ? true : hasCO2 }, // 无CO₂也是实验条件，标记为完成
+      { label: '光照已照射', done: hasLight },
+      { label: 'O₂ 释放', done: isReacting }
+    ];
+    statusList.innerHTML = items.map(item => {
+      const icon = item.done ? '<span class="check">✓</span>' : '<span class="cross">○</span>';
+      return `<li>${icon} ${item.label}</li>`;
+    }).join('');
+  }
+
+  // ---------- 重置 ----------
+  resetBtn.addEventListener('click', () => {
+    stopReaction();
+    hasChloroplast = false;
+    hasReagent = false;
+    hasLight = false;
+    isReacting = false;
+    reagentType = null;
+
+    // 重置条件为默认：有水，无CO₂
+    hasWater = true;
+    hasCO2 = false;
+    updateConditionButtons();
+
+    chloroplastArea.innerHTML = '<div style="color:#8aaa8a; font-size:0.85rem;" id="emptyHint">拖拽叶片到这里提取叶绿体</div>';
+    emptyHint.style.display = 'block';
+    reagentTags.innerHTML = '';
+    bubblesArea.innerHTML = '';
+    reagentIron.classList.remove('added');
+    reagentNadp.classList.remove('added');
+
+    sunDraggable.classList.remove('shining');
+    sunDraggable.classList.remove('dragging');
+    initSunPosition();
+
+    updateStatus();
+    feedbackBox.innerHTML = `<strong>💡 提示：</strong> 从左侧拖拽叶片到容器中，提取叶绿体。`;
+    progressBadge.textContent = '步骤 1/4';
+  });
+
+  window.addEventListener('resize', () => {
+    const cpWidth = centerPanel.clientWidth;
+    const cpHeight = centerPanel.clientHeight;
+    const sunWidth = sunDraggable.offsetWidth;
+    const sunHeight = sunDraggable.offsetHeight;
+    let left = parseFloat(sunDraggable.style.left) || 0;
+    let top = parseFloat(sunDraggable.style.top) || 0;
+    left = Math.max(-sunWidth * 0.3, Math.min(cpWidth - sunWidth * 0.7, left));
+    top = Math.max(-sunHeight * 0.3, Math.min(cpHeight - sunHeight * 0.7, top));
+    sunDraggable.style.left = left + 'px';
+    sunDraggable.style.top = top + 'px';
+  });
+
+  // 初始化
+  updateConditionButtons();
+  updateStatus();
+})();
+</script>
+</body>
+</html>
